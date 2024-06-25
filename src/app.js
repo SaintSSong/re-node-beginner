@@ -2,6 +2,7 @@ import express from 'express';
 import { SERVER_PORT } from './constants/env.constant.js';
 import { productsRouter } from '../src/routers/products.router.js';
 import { connect } from './schemas/index.js';
+import { errorHandler } from './middlewares/error-handler.middleware.js';
 
 connect();
 
@@ -14,9 +15,11 @@ app.use(express.json());
 // 이를 통해 HTML 폼에서 제출된 데이터를 서버에서 쉽게 사용할 수 있도록 합니다.
 app.use(express.urlencoded({ extended: true }));
 
-// 위의 두개는 그냥 외워라!!
+// 위의 두개(app.use(express.json()); / app.use(express.urlencoded({ extended: true }));)는 그냥 외워라!!
 
 app.use('/api', productsRouter);
+
+app.use(errorHandler);
 
 app.get('/', (req, res) => {
   return res.json('서버가 연결되었습니다.');
