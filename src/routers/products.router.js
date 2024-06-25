@@ -26,7 +26,7 @@ productsRouter.post('/products', async (req, res) => {
 // 상품 목록 조회(R)
 productsRouter.get('/products', async (req, res) => {
   // DB에서 조회하기(생성일시 기준 내림차순 정렬)
-  const data = await Product.find().sort({ createAt: 'desc' }).exec();
+  const data = await Product.find().sort({ createdAt: 'desc' }).exec();
   //.exec()는 에러가 났을때 어디서 났는지 알려주는 좋은 것! find 쓸 때 같이 쓰자.
 
   // 완료 메세지 반환하기
@@ -51,20 +51,79 @@ productsRouter.get('/products/:id', async (req, res) => {
 });
 
 // 상품 수정(U)
-productsRouter.put('/products/:id', (req, res) => {
+productsRouter.put('/products/:id', async (req, res) => {
   // 상품 ID 파싱하기
+  const { id } = req.params;
+
   // 상품 수정 정보 파싱하기
+  const { name, description, status, manager, password } = req.body;
+
   // DB에 조회하기(패스워드포함)
+  const existedProduct = await Product.findById(id, { password: true }).exec();
+
   // 비밀번호 일치 여부 확인
+  const isPasswordMatched = password === existedProduct.password;
+  if (!isPasswordMatched) {
+    res
+      .status(401)
+      .json({ status: 401, message: '비밀번호가 일치하지 않습니다.' });
+  }
+
+  // 여기 다시 공부 필요
+  const productinfo = {
+    /** nama에 값이 존재한다. 그러면 { name }가 실행된다. */
+    // 그러면 존재 하지 않으면 어떻게 되는가?
+    // 없는 샘 치게 된다.
+    ...(name && {
+      name,
+    }),
+    ...(description && {
+      description,
+    }),
+    ...(status && {
+      status,
+    }),
+    ...(manager && {
+      manager,
+    }),
+  };
+
   // DB에 갱신하기
+  const data = await Product.findByIdAndUpdate(id, productinfo, { new: true });
+
   // 완료 메세지 반환하기
+  return res
+    .status(200)
+    .json({ status: 200, message: '상품 수정에 성공했습니다.', data });
 });
 
 // 상품 삭제(D)
-productsRouter.delete('/products/:id', (req, res) => {
+productsRouter.delete('/products/:id', async (req, res) => {
   // 상품 ID 파싱하기
+  const { id } = req.params;
+
+  // 패스워드 파싱하기
+  const { password } = req.body;
+
   // DB에 조회하기(패스워드포함)
+  const existedProduct = await Product.findById(id, { password: true }).exec();
+
   // 비밀번호 일치 여부 확인
+  const isPasswordMatched = password === existedProduct.password;
+  if (!isPasswordMatched) {
+    res
+      .status(401)
+      .json({ status: 401, message: '비밀번호가 일치하지 않습니다.' });
+  }
+
+  // DB에 삭제하기
+  const data = await Product.findByIdAndDelete(id);
+
+  // 완료 메세지 반환하기
+  return res
+    .status(200)
+    .json({ status: 200, message: '상품 삭제에 성공했습니다.', data });
+
   // DB에서 삭제하기
   // 완료 메세지 반환하기
 });
