@@ -1,7 +1,9 @@
 import express from 'express';
 import { Product } from '../schemas/product.schema.js';
 
-import { createProductValidator } from '../middlewares/vaildators/create-product.validator.middleware.js';
+import { createProductValidator } from '../middlewares/validators/create-product.validator.middleware.js';
+import { deleteProductValidator } from '../middlewares/validators/delete-product.validator.middleware.js';
+import { updateProductValidator } from '../middlewares/validators/update-product.validator.middleware.js';
 
 const productsRouter = express.Router();
 
@@ -87,104 +89,112 @@ productsRouter.get('/products/:id', async (req, res, next) => {
 });
 
 // 상품 수정(U)
-productsRouter.put('/products/:id', async (req, res, next) => {
-  try {
-    // 상품 ID 파싱하기
-    const { id } = req.params;
+productsRouter.put(
+  '/products/:id',
+  updateProductValidator,
+  async (req, res, next) => {
+    try {
+      // 상품 ID 파싱하기
+      const { id } = req.params;
 
-    // 상품 수정 정보 파싱하기
-    const { name, description, status, manager, password } = req.body;
+      // 상품 수정 정보 파싱하기
+      const { name, description, status, manager, password } = req.body;
 
-    // DB에 조회하기(패스워드포함)
-    const existedProduct = await Product.findById(id, {
-      password: true,
-    }).exec();
+      // DB에 조회하기(패스워드포함)
+      const existedProduct = await Product.findById(id, {
+        password: true,
+      }).exec();
 
-    if (!existedProduct) {
+      if (!existedProduct) {
+        return res
+          .status(404)
+          .json({ status: 404, message: '상품이 존재하지 않습니다.' });
+      }
+
+      // 비밀번호 일치 여부 확인
+      const isPasswordMatched = password === existedProduct.password;
+      if (!isPasswordMatched) {
+        res
+          .status(401)
+          .json({ status: 401, message: '비밀번호가 일치하지 않습니다.' });
+      }
+
+      // 여기 다시 공부 필요
+      const productInfo = {
+        /** nama에 값이 존재한다. 그러면 { name }가 실행된다. */
+        // 그러면 존재 하지 않으면 어떻게 되는가?
+        // 없는 샘 치게 된다.
+        ...(name && {
+          name: name,
+        }),
+        ...(description && {
+          description: description,
+        }),
+        ...(status && {
+          status: status,
+        }),
+        ...(manager && {
+          manager: manager,
+        }),
+      };
+
+      // DB에 갱신하기
+      const data = await Product.findByIdAndUpdate(id, productInfo, {
+        new: true,
+      });
+
+      // 완료 메세지 반환하기
       return res
-        .status(404)
-        .json({ status: 404, message: '상품이 존재하지 않습니다.' });
+        .status(200)
+        .json({ status: 200, message: '상품 수정에 성공했습니다.', data });
+    } catch (error) {
+      next(error);
     }
-
-    // 비밀번호 일치 여부 확인
-    const isPasswordMatched = password === existedProduct.password;
-    if (!isPasswordMatched) {
-      res
-        .status(401)
-        .json({ status: 401, message: '비밀번호가 일치하지 않습니다.' });
-    }
-
-    // 여기 다시 공부 필요
-    const productinfo = {
-      /** nama에 값이 존재한다. 그러면 { name }가 실행된다. */
-      // 그러면 존재 하지 않으면 어떻게 되는가?
-      // 없는 샘 치게 된다.
-      ...(name && {
-        name,
-      }),
-      ...(description && {
-        description,
-      }),
-      ...(status && {
-        status,
-      }),
-      ...(manager && {
-        manager,
-      }),
-    };
-
-    // DB에 갱신하기
-    const data = await Product.findByIdAndUpdate(id, productinfo, {
-      new: true,
-    });
-
-    // 완료 메세지 반환하기
-    return res
-      .status(200)
-      .json({ status: 200, message: '상품 수정에 성공했습니다.', data });
-  } catch (error) {
-    next(error);
-  }
-});
+  },
+);
 
 // 상품 삭제(D)
-productsRouter.delete('/products/:id', async (req, res, next) => {
-  try {
-    // 상품 ID 파싱하기
-    const { id } = req.params;
+productsRouter.delete(
+  '/products/:id',
+  deleteProductValidator,
+  async (req, res, next) => {
+    try {
+      // 상품 ID 파싱하기
+      const { id } = req.params;
 
-    // 패스워드 파싱하기
-    const { password } = req.body;
+      // 패스워드 파싱하기
+      const { password } = req.body;
 
-    // DB에 조회하기(패스워드포함)
-    const existedProduct = await Product.findById(id, {
-      password: true,
-    }).exec();
+      // DB에 조회하기(패스워드포함)
+      const existedProduct = await Product.findById(id, {
+        password: true,
+      }).exec();
 
-    if (!existedProduct) {
+      if (!existedProduct) {
+        return res
+          .status(404)
+          .json({ status: 404, message: '상품이 존재하지 않습니다.' });
+      }
+
+      // 비밀번호 일치 여부 확인
+      const isPasswordMatched = password === existedProduct.password;
+      if (!isPasswordMatched) {
+        res
+          .status(401)
+          .json({ status: 401, message: '비밀번호가 일치하지 않습니다.' });
+      }
+
+      // DB에 삭제하기
+      const data = await Product.findByIdAndDelete(id);
+
+      // 완료 메세지 반환하기
       return res
-        .status(404)
-        .json({ status: 404, message: '상품이 존재하지 않습니다.' });
+        .status(200)
+        .json({ status: 200, message: '상품 삭제에 성공했습니다.', data });
+    } catch (error) {
+      next(error);
     }
-
-    // 비밀번호 일치 여부 확인
-    const isPasswordMatched = password === existedProduct.password;
-    if (!isPasswordMatched) {
-      res
-        .status(401)
-        .json({ status: 401, message: '비밀번호가 일치하지 않습니다.' });
-    }
-
-    // DB에 삭제하기
-    const data = await Product.findByIdAndDelete(id);
-
-    // 완료 메세지 반환하기
-    return res
-      .status(200)
-      .json({ status: 200, message: '상품 삭제에 성공했습니다.', data });
-  } catch (error) {
-    next(error);
-  }
-});
+  },
+);
 
 export { productsRouter }; // 4번째 줄 만든 것을 내보낸다.

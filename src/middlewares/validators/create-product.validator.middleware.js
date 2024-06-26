@@ -24,6 +24,7 @@ export const createProductValidator = async (req, res, next) => {
 
     // joi의 에러를 검증해주는 곳?
     await joiSchema.validateAsync(req.body);
+    next(); // next()를 안써주면 다음으로 안넘어감 따라서 미들웨어에서 try()catch(){} 할 때 next를 꼭 써야함.
   } catch (error) {
     next(error);
   }
