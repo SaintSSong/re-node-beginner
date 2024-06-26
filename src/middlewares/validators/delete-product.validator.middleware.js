@@ -1,6 +1,6 @@
 import Joi from 'joi';
 
-export const createProductValidator = async (req, res, next) => {
+export const deleteProductValidator = async (req, res, next) => {
   try {
     // 유효성 검증(joi)은 파싱 하기 전에 해야한다!
     const joiSchema = Joi.object({
@@ -12,6 +12,7 @@ export const createProductValidator = async (req, res, next) => {
 
     // joi의 에러를 검증해주는 곳?
     await joiSchema.validateAsync(req.body);
+    next();
   } catch (error) {
     next(error);
   }
